@@ -15,5 +15,5 @@ output "invoke_url" {
 }
 
 output "website_url" {
-  value = "https://${aws_s3_bucket.wildrydes.website_endpoint}/"
+  value = "http://${aws_s3_bucket.wildrydes.website_endpoint}/"
 }

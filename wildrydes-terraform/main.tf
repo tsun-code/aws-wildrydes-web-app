@@ -14,8 +14,8 @@ locals {
 }
 
 resource "aws_s3_bucket" "wildrydes" {
-  region = var.region
-  bucket = local.bucket_name
+  region        = var.region
+  bucket        = local.bucket_name
   force_destroy = true
 
   website {
@@ -213,13 +213,25 @@ resource "aws_lambda_function" "wildrydes_lambda" {
 
 }
 
-
 resource "aws_api_gateway_rest_api" "wildrydes" {
+  depends_on = [
+    aws_lambda_function.wildrydes_lambda
+  ]
+
   name = local.api_gateway_name
 
   endpoint_configuration {
     types = ["EDGE"]
   }
+}
+
+resource "aws_lambda_permission" "apigw_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.wildrydes_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_api_gateway_rest_api.wildrydes.execution_arn}/*/*/*"
 }
 
 resource "aws_api_gateway_authorizer" "wildrydes" {
@@ -322,9 +334,11 @@ resource "aws_api_gateway_method_response" "wildrydes_ride_options" {
 # Enable CORS - end
 
 resource "aws_api_gateway_deployment" "wildrydes_prod" {
-depends_on = [
+  depends_on = [
     aws_api_gateway_integration.wildrydes_ride_post,
     aws_api_gateway_integration.wildrydes_ride_options,
+    aws_api_gateway_method_response.wildrydes_ride_options,
+    aws_api_gateway_integration_response.wildrydes_ride_options,
   ]
 
   rest_api_id = aws_api_gateway_rest_api.wildrydes.id
