@@ -7,7 +7,9 @@ locals {
   bucket_name           = "wildrydes-tsun-code"
   user_pool_name        = "WildRydes"
   user_pool_client_name = "WildRydesWebApp"
-  dynamodb_table_name = "Rides"
+  dynamodb_table_name   = "Rides"
+  lambda_iam_role       = "WildRydesLambda"
+  lambda_function_name  = "RequestUnicorn"
 }
 
 resource "aws_s3_bucket" "wildrydes" {
@@ -151,5 +153,65 @@ resource "aws_dynamodb_table" "wildrydes" {
     name = "RideId"
     type = "S"
   }
-  
+
+}
+
+resource "aws_iam_role" "wildrydes_lambda" {
+  name = local.lambda_iam_role
+  description = "Allows Lambda functions to call AWS services on your behalf."
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "wildrydes_lambda-AWSLambdaBasicExecutionRole" {
+  role       = aws_iam_role.wildrydes_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "wildrydes_lambda-DynamoDBWriteAccess" {
+  name = "DynamoDBWriteAccess"
+  role = aws_iam_role.wildrydes_lambda.id
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "dynamodb:PutItem",
+            "Resource": "${aws_dynamodb_table.wildrydes.arn}"
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_lambda_function" "wildrydes_lambda" {
+  filename      = "resources/lambda/wildrydes_lambda.zip"
+  function_name = local.lambda_function_name
+  role          = aws_iam_role.wildrydes_lambda.arn
+  handler       = "index.handler"
+
+  # The filebase64sha256() function is available in Terraform 0.11.12 and later
+  # For Terraform 0.11.11 and earlier, use the base64sha256() function and the file() function:
+  # source_code_hash = "${base64sha256(file("lambda_function_payload.zip"))}"
+  source_code_hash = filebase64sha256("resources/lambda/wildrydes_lambda.zip")
+
+  runtime = "nodejs10.x"
+
 }
