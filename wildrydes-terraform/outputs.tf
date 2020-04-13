@@ -11,5 +11,9 @@ output "region" {
 }
 
 output "invoke_url" {
-    value = aws_api_gateway_stage.wildrydes_prod.invoke_url
+  value = aws_api_gateway_stage.wildrydes_prod.invoke_url
+}
+
+output "website_endpoint" {
+  value = aws_s3_bucket.wildrydes.website_endpoint
 }
