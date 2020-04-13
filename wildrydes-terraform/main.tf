@@ -16,11 +16,7 @@ locals {
 resource "aws_s3_bucket" "wildrydes" {
   region = var.region
   bucket = local.bucket_name
-
-  versioning {
-    enabled    = false
-    mfa_delete = false
-  }
+  force_destroy = true
 
   website {
     index_document = "index.html"
@@ -281,6 +277,10 @@ resource "aws_api_gateway_integration" "wildrydes_ride_options" {
 }
 
 resource "aws_api_gateway_integration_response" "wildrydes_ride_options" {
+  depends_on = [
+    aws_api_gateway_integration.wildrydes_ride_options
+  ]
+
   rest_api_id = aws_api_gateway_rest_api.wildrydes.id
   resource_id = aws_api_gateway_resource.wildrydes_ride.id
   http_method = aws_api_gateway_method.wildrydes_ride_options.http_method
@@ -300,6 +300,10 @@ resource "aws_api_gateway_integration_response" "wildrydes_ride_options" {
 
 
 resource "aws_api_gateway_method_response" "wildrydes_ride_options" {
+  depends_on = [
+    aws_api_gateway_method.wildrydes_ride_options
+  ]
+
   rest_api_id = aws_api_gateway_rest_api.wildrydes.id
   resource_id = aws_api_gateway_resource.wildrydes_ride.id
   http_method = aws_api_gateway_method.wildrydes_ride_options.http_method
@@ -318,12 +322,11 @@ resource "aws_api_gateway_method_response" "wildrydes_ride_options" {
 # Enable CORS - end
 
 resource "aws_api_gateway_deployment" "wildrydes_prod" {
+depends_on = [
+    aws_api_gateway_integration.wildrydes_ride_post,
+    aws_api_gateway_integration.wildrydes_ride_options,
+  ]
+
   rest_api_id = aws_api_gateway_rest_api.wildrydes.id
   stage_name  = "prod"
-}
-
-resource "aws_api_gateway_stage" "wildrydes_prod" {
-  stage_name    = "prod"
-  rest_api_id   = aws_api_gateway_rest_api.wildrydes.id
-  deployment_id = aws_api_gateway_deployment.wildrydes_prod.id
 }

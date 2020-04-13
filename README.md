@@ -10,6 +10,14 @@ https://aws.amazon.com/getting-started/hands-on/build-serverless-web-app-lambda-
 ## Terraform Setup
 ### Implement infrastructure as code with terraform for setting up the whole infrastructure. It allows instant creation or termination of the resources needed for this project.
 
+#### Update the region and unique_name in 'wildrydes-terraform/terraform.tfvars' file to your own values
+
+#### **`terraform.tfvars`**
+```
+region      = "ap-southeast-1"
+unique_name = "your-own-name"
+```
+
 #### Setup the resources with terraform
 
 ```
