@@ -5,6 +5,8 @@ provider "aws" {
 
 locals {
   bucket_name           = "wildrydes-tsun-code"
+  user_pool_name        = "WildRydes"
+  user_pool_client_name = "WildRydesWebApp"
 }
 
 resource "aws_s3_bucket" "wildrydes" {
@@ -43,3 +45,96 @@ resource "aws_s3_bucket_policy" "wildrydes" {
 POLICY
 }
 
+resource "aws_cognito_user_pool" "wildrydes" {
+  name                     = local.user_pool_name
+  auto_verified_attributes = ["email"]
+
+  username_configuration {
+    case_sensitive = false
+  }
+
+  email_configuration {
+    email_sending_account = "COGNITO_DEFAULT"
+  }
+
+  schema {
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    name                     = "email"
+    required                 = true
+
+    string_attribute_constraints {
+      max_length = "2048"
+      min_length = "0"
+    }
+  }
+
+  password_policy {
+    minimum_length                   = 8
+    require_lowercase                = true
+    require_numbers                  = true
+    require_symbols                  = true
+    require_uppercase                = true
+    temporary_password_validity_days = 7
+  }
+}
+
+resource "aws_cognito_user_pool_client" "wildrydes" {
+  name = local.user_pool_client_name
+
+  user_pool_id = aws_cognito_user_pool.wildrydes.id
+
+  allowed_oauth_flows                  = []
+  allowed_oauth_flows_user_pool_client = false
+  allowed_oauth_scopes                 = []
+  callback_urls                        = []
+  logout_urls                          = []
+  supported_identity_providers         = []
+  refresh_token_validity               = "30"
+  explicit_auth_flows                  = ["ALLOW_CUSTOM_AUTH", "ALLOW_REFRESH_TOKEN_AUTH", "ALLOW_USER_SRP_AUTH"]
+
+  read_attributes = [
+    "address",
+    "birthdate",
+    "email",
+    "email_verified",
+    "family_name",
+    "gender",
+    "given_name",
+    "locale",
+    "middle_name",
+    "name",
+    "nickname",
+    "phone_number",
+    "phone_number_verified",
+    "picture",
+    "preferred_username",
+    "profile",
+    "updated_at",
+    "website",
+    "zoneinfo",
+  ]
+
+
+  write_attributes = [
+    "address",
+    "birthdate",
+    "email",
+    "family_name",
+    "gender",
+    "given_name",
+    "locale",
+    "middle_name",
+    "name",
+    "nickname",
+    "phone_number",
+    "picture",
+    "preferred_username",
+    "profile",
+    "updated_at",
+    "website",
+    "zoneinfo",
+  ]
+
+}
