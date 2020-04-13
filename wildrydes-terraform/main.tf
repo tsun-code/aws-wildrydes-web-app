@@ -7,6 +7,7 @@ locals {
   bucket_name           = "wildrydes-tsun-code"
   user_pool_name        = "WildRydes"
   user_pool_client_name = "WildRydesWebApp"
+  dynamodb_table_name = "Rides"
 }
 
 resource "aws_s3_bucket" "wildrydes" {
@@ -137,4 +138,18 @@ resource "aws_cognito_user_pool_client" "wildrydes" {
     "zoneinfo",
   ]
 
+}
+
+resource "aws_dynamodb_table" "wildrydes" {
+  name           = local.dynamodb_table_name
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 5
+  write_capacity = 5
+  hash_key       = "RideId"
+
+  attribute {
+    name = "RideId"
+    type = "S"
+  }
+  
 }
