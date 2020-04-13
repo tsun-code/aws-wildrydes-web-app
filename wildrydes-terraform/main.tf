@@ -10,6 +10,7 @@ locals {
   dynamodb_table_name   = "Rides"
   lambda_iam_role       = "WildRydesLambda"
   lambda_function_name  = "RequestUnicorn"
+  api_gateway_name      = "WildRydes"
 }
 
 resource "aws_s3_bucket" "wildrydes" {
@@ -157,7 +158,7 @@ resource "aws_dynamodb_table" "wildrydes" {
 }
 
 resource "aws_iam_role" "wildrydes_lambda" {
-  name = local.lambda_iam_role
+  name        = local.lambda_iam_role
   description = "Allows Lambda functions to call AWS services on your behalf."
 
   assume_role_policy = <<EOF
@@ -214,4 +215,115 @@ resource "aws_lambda_function" "wildrydes_lambda" {
 
   runtime = "nodejs10.x"
 
+}
+
+
+resource "aws_api_gateway_rest_api" "wildrydes" {
+  name = local.api_gateway_name
+
+  endpoint_configuration {
+    types = ["EDGE"]
+  }
+}
+
+resource "aws_api_gateway_authorizer" "wildrydes" {
+  name            = local.api_gateway_name
+  rest_api_id     = aws_api_gateway_rest_api.wildrydes.id
+  type            = "COGNITO_USER_POOLS"
+  identity_source = "method.request.header.Authorization"
+  provider_arns   = [aws_cognito_user_pool.wildrydes.arn]
+}
+
+resource "aws_api_gateway_resource" "wildrydes_ride" {
+  rest_api_id = aws_api_gateway_rest_api.wildrydes.id
+  parent_id   = aws_api_gateway_rest_api.wildrydes.root_resource_id
+  path_part   = "ride"
+}
+
+resource "aws_api_gateway_method" "wildrydes_ride_post" {
+  rest_api_id   = aws_api_gateway_rest_api.wildrydes.id
+  resource_id   = aws_api_gateway_resource.wildrydes_ride.id
+  http_method   = "POST"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.wildrydes.id
+}
+
+resource "aws_api_gateway_integration" "wildrydes_ride_post" {
+  rest_api_id             = aws_api_gateway_rest_api.wildrydes.id
+  resource_id             = aws_api_gateway_resource.wildrydes_ride.id
+  http_method             = aws_api_gateway_method.wildrydes_ride_post.http_method
+  integration_http_method = aws_api_gateway_method.wildrydes_ride_post.http_method
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.wildrydes_lambda.invoke_arn
+  cache_key_parameters    = []
+  cache_namespace         = aws_api_gateway_resource.wildrydes_ride.id
+  content_handling        = "CONVERT_TO_TEXT"
+}
+
+# Enable CORS - start
+resource "aws_api_gateway_method" "wildrydes_ride_options" {
+  rest_api_id   = aws_api_gateway_rest_api.wildrydes.id
+  resource_id   = aws_api_gateway_resource.wildrydes_ride.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "wildrydes_ride_options" {
+  rest_api_id          = aws_api_gateway_rest_api.wildrydes.id
+  resource_id          = aws_api_gateway_resource.wildrydes_ride.id
+  http_method          = aws_api_gateway_method.wildrydes_ride_options.http_method
+  type                 = "MOCK"
+  passthrough_behavior = "WHEN_NO_MATCH"
+
+  request_templates = {
+    "application/json" = "{ \"statusCode\": 200 }"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "wildrydes_ride_options" {
+  rest_api_id = aws_api_gateway_rest_api.wildrydes.id
+  resource_id = aws_api_gateway_resource.wildrydes_ride.id
+  http_method = aws_api_gateway_method.wildrydes_ride_options.http_method
+  status_code = 200
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = ""
+  }
+
+}
+
+
+resource "aws_api_gateway_method_response" "wildrydes_ride_options" {
+  rest_api_id = aws_api_gateway_rest_api.wildrydes.id
+  resource_id = aws_api_gateway_resource.wildrydes_ride.id
+  http_method = aws_api_gateway_method.wildrydes_ride_options.http_method
+  status_code = 200
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = false
+    "method.response.header.Access-Control-Allow-Methods" = false
+    "method.response.header.Access-Control-Allow-Origin"  = false
+  }
+}
+# Enable CORS - end
+
+resource "aws_api_gateway_deployment" "wildrydes_prod" {
+  rest_api_id = aws_api_gateway_rest_api.wildrydes.id
+  stage_name  = "prod"
+}
+
+resource "aws_api_gateway_stage" "wildrydes_prod" {
+  stage_name    = "prod"
+  rest_api_id   = aws_api_gateway_rest_api.wildrydes.id
+  deployment_id = aws_api_gateway_deployment.wildrydes_prod.id
 }
