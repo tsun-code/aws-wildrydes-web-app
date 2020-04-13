@@ -14,6 +14,6 @@ output "invoke_url" {
   value = aws_api_gateway_deployment.wildrydes_prod.invoke_url
 }
 
-output "website_endpoint" {
-  value = aws_s3_bucket.wildrydes.website_endpoint
+output "website_url" {
+  value = "https://${aws_s3_bucket.wildrydes.website_endpoint}/"
 }
