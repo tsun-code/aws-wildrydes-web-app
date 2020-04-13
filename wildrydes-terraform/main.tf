@@ -156,6 +156,7 @@ resource "aws_dynamodb_table" "wildrydes" {
 resource "aws_iam_role" "wildrydes_lambda" {
   name        = local.lambda_iam_role
   description = "Allows Lambda functions to call AWS services on your behalf."
+  force_detach_policies = true
 
   assume_role_policy = <<EOF
 {
