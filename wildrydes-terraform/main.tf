@@ -4,7 +4,7 @@ provider "aws" {
 }
 
 locals {
-  bucket_name           = "wildrydes-tsun-code"
+  bucket_name           = "wildrydes-${var.unique_name}"
   user_pool_name        = "WildRydes"
   user_pool_client_name = "WildRydesWebApp"
   dynamodb_table_name   = "Rides"
@@ -18,7 +18,7 @@ resource "aws_s3_bucket" "wildrydes" {
   bucket = local.bucket_name
 
   versioning {
-    enabled    = true
+    enabled    = false
     mfa_delete = false
   }
 
